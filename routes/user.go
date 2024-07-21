@@ -14,7 +14,7 @@ func UserRouter(userService *services.UserService) *mux.Router {
 	userController := controllers.NewUserController(userService)
 
 	router := mux.NewRouter()
-	router.Use(middleware.Auth)
+
 
 	// AUTH routes
 	router.HandleFunc("/users/test/test", controllers.Test).Methods("GET")

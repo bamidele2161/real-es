@@ -22,7 +22,7 @@ func PropertyRouter(propertyService *services.PropertyService) *mux.Router {
 	propertyController := controllers.NewPropertyController(propertyService)
 
 	router := mux.NewRouter()
-	router.Use(middleware.Auth)
+
 
 	//PROPERTY routes
 	router.HandleFunc("/properties/create", propertyController.CreateProperty).Methods("POST")

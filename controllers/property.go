@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/gorilla/mux"
 )
@@ -21,7 +22,7 @@ func NewPropertyController(service services.PropertyServiceInterface) *PropertyC
 
 func (c PropertyController) CreateProperty(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var propertyPayload models.PropertyPayload
+	var propertyPayload []models.PropertyPayload
 	err := json.NewDecoder(r.Body).Decode(&propertyPayload)
 
 	if err != nil {
@@ -29,14 +30,36 @@ func (c PropertyController) CreateProperty(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	
-	createProperty, err := c.PropertyService.CreateProperty(propertyPayload)
+	var wg sync.WaitGroup
+	responses := make(chan models.CreatedPropertyResponse, len(propertyPayload))
 
-	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
-		return
+	for _, payload := range propertyPayload {
+		wg.Add(1)
+		go func(payload models.PropertyPayload) {
+			defer wg.Done()
+
+			response, err := c.PropertyService.CreateProperty(payload)
+
+			if err != nil {
+				utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+				return
+			} else {
+				responses <- response
+			}
+
+		}(payload)
+
 	}
+	
 
-	json.NewEncoder(w).Encode(createProperty)
+	wg.Wait()
+	close(responses)
+
+	var result []models.CreatedPropertyResponse
+	for response := range responses {
+		result = append(result, response)
+	}
+	json.NewEncoder(w).Encode(result)
 }
 
 
